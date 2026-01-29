@@ -8,6 +8,7 @@ on:
       - "README.md"
       - ".github/**"
   # Optional: publish images on tags as well
+  workflow_dispatch: 
   release:
     types: [published]
 
