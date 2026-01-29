@@ -1,0 +1,47 @@
+
+name: Build and Push Docker image to ACR
+
+on:
+  push:
+    branches: [ main ]
+    paths-ignore:
+      - "README.md"
+      - ".github/**"
+  # Optional: publish images on tags as well
+  release:
+    types: [published]
+
+env:
+  ACR_NAME: ailonaacr            # just the registry name (no domain)
+  ACR_LOGIN_SERVER: ailonaacr-hvb4c0addbd6d9fr.azurecr.io
+  IMAGE_NAME: aca-azure-devops-runner           # repository path in ACR (e.g., 'service/name')
+  DOCKER_CONTEXT: .               # build context
+  DOCKERFILE: ./Dockerfile.azure-pipelines       # dockerfile path
+  PLATFORMS: linux/amd64          # add linux/arm64 if needed (comma-separated)
+
+permissions:
+  id-token: write   # required for OIDC to Azure
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      
+      - name: Docker login to ACR
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ env.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_SP_USERNAME }}  
+          password: ${{ secrets.ACR_SP_PASSWORD }}
+
+      - name: Build and Push image
+        run: |
+          IMAGE_TAG=${GITHUB_SHA::7}
+          docker build -t $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG -f $DOCKERFILE $DOCKER_CONTEXT
+          docker push $ACR_LOGIN_SERVER/$IMAGE_NAME:$IMAGE_TAG
+
